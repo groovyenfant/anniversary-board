@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Admin Dashboard - Live Wall</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-width: 350px;
+            --bg-dark: #1e1e1e;
+            --panel-dark: #2c2c2c;
+            --accent: #18a0fb;
+        }
+
+        * { box-sizing: border-box; font-family: 'Prompt', sans-serif; }
+
+        body {
+            margin: 0;
+            display: flex;
+            background-color: var(--bg-dark);
+            height: 100vh;
+            color: white;
+            overflow: hidden;
+        }
+
+        /* --- ฝั่งซ้าย: Admin Sidebar --- */
+        #sidebar {
+            width: var(--sidebar-width);
+            background: var(--panel-dark);
+            border-right: 1px solid #444;
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #444;
+            background: #252525;
+        }
+
+        /* รายการข้อความที่แขกส่งมา (Queue) */
+        #message-queue {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .queue-item {
+            background: #3d3d3d;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-left: 4px solid var(--accent);
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn { from { opacity:0; transform: translateX(-10px); } to { opacity:1; transform: translateX(0); } }
+
+        .queue-item .sender { font-size: 12px; color: var(--accent); font-weight: 600; }
+        .queue-item .text { font-size: 14px; margin: 5px 0; color: #ddd; }
+        
+        .admin-btns { display: flex; gap: 5px; margin-top: 8px; }
+        .btn {
+            flex: 1; border: none; padding: 6px; border-radius: 5px; 
+            cursor: pointer; font-size: 12px; font-weight: 600; transition: 0.2s;
+        }
+        .btn-show { background: var(--accent); color: white; }
+        .btn-delete { background: #ff4757; color: white; }
+        .btn:hover { opacity: 0.8; }
+
+        /* --- ฝั่งขวา: Live Canvas --- */
+        #canvas {
+            flex-grow: 1;
+            position: relative;
+            background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        /* สไตล์ Post-it บนบอร์ด */
+        .post-it {
+            width: 250px; padding: 25px; position: absolute; border-radius: 15px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4); cursor: grab; color: #1a1a1a;
+            resize: both; overflow: visible; display: flex; flex-direction: column;
+            animation: popUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popUp { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .post-it:active { cursor: grabbing; z-index: 9999 !important; }
+        .post-it .msg-text { font-size: 20px; line-height: 1.4; flex-grow: 1; margin-bottom: 10px; }
+        .post-it .msg-footer { font-size: 13px; font-weight: 600; opacity: 0.7; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 8px; }
+        
+        /* ปุ่มกากบาทลบบนตัว Post-it */
+        .remove-node { position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; background: #ff4757; color: white; border-radius: 50%; display: none; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; border: 2px solid white; }
+        .post-it:hover .remove-node { display: flex; }
+    </style>
+</head>
+<body>
+
+    <aside id="sidebar">
+        <div class="sidebar-header">
+            <h2 style="margin:0; font-size: 18px;">📥 ข้อความเข้าล่าสุด</h2>
+            <p style="margin:5px 0 0 0; font-size: 12px; color: #888;">กด "แสดง" เพื่อเอาขึ้นบอร์ด</p>
+        </div>
+        <div id="message-queue">
+            </div>
+        <div style="padding: 15px; border-top: 1px solid #444;">
+             <button onclick="if(confirm('ล้างบอร์ดทั้งหมด?')) document.getElementById('canvas').innerHTML=''" style="width:100%; padding:10px; background:none; border:1px solid #ff4757; color:#ff4757; border-radius:8px; cursor:pointer;">Clear Screen</button>
+        </div>
+    </aside>
+
+    <main id="canvas"></main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getDatabase, ref, onChildAdded, remove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        // ใช้ Config ของคุณ
+        const firebaseConfig = {
+            apiKey: "AIzaSyAA8cksEKdFZ6pDBKgaT0FLL4-uylLyx9c",
+            authDomain: "companyanniversarytest.firebaseapp.com",
+            databaseURL: "https://companyanniversarytest-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "companyanniversarytest",
+            storageBucket: "companyanniversarytest.firebasestorage.app",
+            messagingSenderId: "698195391398",
+            appId: "1:698195391398:web:f677fe2869792766121567",
+            measurementId: "G-EGH983F7VF"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const wishesRef = ref(db, 'wishes');
+
+        let zIndex = 100;
+
+        // 1. เมื่อมีคนส่งข้อความจากมือถือ -> มาโชว์ที่ Sidebar ก่อน
+        onChildAdded(wishesRef, (snapshot) => {
+            const data = snapshot.val();
+            const key = snapshot.key;
+            addToQueue(key, data);
+        });
+
+        function addToQueue(key, data) {
+            const queue = document.getElementById('message-queue');
+            const item = document.createElement('div');
+            item.className = 'queue-item';
+            item.id = `queue-${key}`;
+            item.innerHTML = `
+                <div class="sender">จาก: ${data.name}</div>
+                <div class="text">${data.message}</div>
+                <div class="admin-btns">
+                    <button class="btn btn-show" onclick="showOnBoard('${key}', ${JSON.stringify(data).replace(/"/g, '&quot;')})">แสดง ✅</button>
+                    <button class="btn btn-delete" onclick="deleteFromDb('${key}')">ทิ้ง 🗑️</button>
+                </div>
+            `;
+            queue.prepend(item); // เอาอันล่าสุดขึ้นข้างบน
+        }
+
+        // 2. ฟังก์ชันเอาขึ้นบอร์ด (Canvas)
+        window.showOnBoard = function(key, data) {
+            const canvas = document.getElementById('canvas');
+            const note = document.createElement('div');
+            note.className = 'post-it';
+            note.style.backgroundColor = data.color || '#fff9c4';
+            note.style.zIndex = zIndex++;
+            
+            // สุ่มตำแหน่งเริ่มต้น
+            note.style.left = (Math.random() * (canvas.offsetWidth - 300) + 50) + 'px';
+            note.style.top = (Math.random() * (canvas.offsetHeight - 300) + 50) + 'px';
+            note.style.transform = `rotate(${(Math.random() * 6) - 3}deg)`;
+
+            const textColor = getContrastYIQ(data.color || '#fff9c4');
+            note.style.color = textColor;
+
+            note.innerHTML = `
+                <div class="remove-node" onclick="this.parentElement.remove()">✕</div>
+                <div class="msg-text">${data.message}</div>
+                <div class="msg-footer">✍️ ${data.name}</div>
+            `;
+
+            makeDraggable(note);
+            canvas.appendChild(note);
+            
+            // ลบออกจาก Queue หลังจากแสดงแล้ว (หรือจะค้างไว้ก็ได้)
+            document.getElementById(`queue-${key}`).style.opacity = '0.4';
+            document.getElementById(`queue-${key}`).querySelector('.btn-show').disabled = true;
+        };
+
+        // 3. ฟังก์ชันลบออกจาก Database
+        window.deleteFromDb = function(key) {
+            if(confirm('ต้องการลบข้อความนี้ถาวรใช่ไหม?')) {
+                remove(ref(db, `wishes/${key}`));
+                document.getElementById(`queue-${key}`).remove();
+            }
+        };
+
+        function makeDraggable(el) {
+            let x = 0, y = 0;
+            el.onmousedown = (e) => {
+                if(e.target.className === 'remove-node') return;
+                el.style.zIndex = zIndex++;
+                x = e.clientX; y = e.clientY;
+                document.onmousemove = (e) => {
+                    let dx = x - e.clientX; let dy = y - e.clientY;
+                    x = e.clientX; y = e.clientY;
+                    el.style.top = (el.offsetTop - dy) + "px";
+                    el.style.left = (el.offsetLeft - dx) + "px";
+                };
+                document.onmouseup = () => { document.onmousemove = null; };
+            };
+        }
+
+        function getContrastYIQ(hex){
+            hex = hex.replace("#", "");
+            let r = parseInt(hex.substr(0,2),16);
+            let g = parseInt(hex.substr(2,2),16);
+            let b = parseInt(hex.substr(4,2),16);
+            return (((r*299)+(g*587)+(b*114))/1000 >= 128) ? '#1a1a1a' : '#ffffff';
+        }
+    </script>
+</body>
+</html>

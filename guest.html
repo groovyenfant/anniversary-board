@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ส่งคำอวยพร ✨</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg: #f0f2f5; --card: #ffffff; --accent: #18a0fb; }
+        * { box-sizing: border-box; font-family: 'Prompt', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; background: var(--bg); display: flex; justify-content: center; padding: 20px; }
+        .container { width: 100%; max-width: 450px; background: var(--card); border-radius: 20px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #1e1e1e; margin-bottom: 25px; }
+        .label { font-size: 13px; color: #666; margin-bottom: 8px; font-weight: 600; }
+        input, textarea { 
+            width: 100%; background: #f9f9f9; border: 1px solid #ddd; padding: 15px; 
+            border-radius: 12px; font-size: 16px; margin-bottom: 20px; outline: none; transition: 0.3s;
+        }
+        input:focus, textarea:focus { border-color: var(--accent); background: #fff; }
+        .color-label { font-size: 13px; color: #666; margin-bottom: 10px; font-weight: 600; }
+        input[type="color"] { height: 50px; cursor: pointer; padding: 5px; margin-bottom: 25px; }
+        #send-btn { 
+            width: 100%; background: var(--accent); color: white; border: none; 
+            padding: 18px; border-radius: 12px; font-weight: 600; font-size: 18px; cursor: pointer;
+            box-shadow: 0 4px 15px rgba(24, 160, 251, 0.3);
+        }
+        #send-btn:active { transform: scale(0.98); opacity: 0.9; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🎉 ร่วมอวยพรบริษัท</h2>
+    
+    <div class="label">ชื่อของคุณ</div>
+    <input type="text" id="gName" placeholder="ใส่ชื่อเท่ๆ ของคุณ..." maxlength="20">
+
+    <div class="label">ข้อความอวยพร</div>
+    <textarea id="gWish" rows="4" placeholder="พิมพ์ข้อความที่นี่..." maxlength="100"></textarea>
+
+    <div class="color-label">เลือกสี Post-it ที่ชอบ</div>
+    <input type="color" id="gColor" value="#fff9c4">
+
+    <button id="send-btn">ส่งขึ้นจอใหญ่เลย! 🚀</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+    // ใช้ Config ของคุณที่ให้มา
+    const firebaseConfig = {
+        apiKey: "AIzaSyAA8cksEKdFZ6pDBKgaT0FLL4-uylLyx9c",
+        authDomain: "companyanniversarytest.firebaseapp.com",
+        databaseURL: "https://companyanniversarytest-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "companyanniversarytest",
+        storageBucket: "companyanniversarytest.firebasestorage.app",
+        messagingSenderId: "698195391398",
+        appId: "1:698195391398:web:f677fe2869792766121567",
+        measurementId: "G-EGH983F7VF"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    document.getElementById('send-btn').onclick = function() {
+        const name = document.getElementById('gName').value;
+        const wish = document.getElementById('gWish').value;
+        const color = document.getElementById('gColor').value;
+
+        if(!wish) {
+            alert("อย่าลืมพิมพ์ข้อความก่อนส่งนะครับ!");
+            return;
+        }
+
+        // ส่งข้อมูลเข้า Firebase
+        push(ref(db, 'wishes'), {
+            name: name || "แขกผู้ใจดี",
+            message: wish,
+            color: color,
+            timestamp: Date.now()
+        }).then(() => {
+            alert("ส่งเรียบร้อย! ไปดูที่หน้าจอใหญ่ได้เลย 🎉");
+            document.getElementById('gWish').value = ""; // ล้างข้อความเก่า
+        }).catch((error) => {
+            alert("ส่งไม่สำเร็จ: " + error.message);
+        });
+    }
+</script>
+
+</body>
+</html>
