@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ออกแบบคำอวยพรของคุณ ✨</title>
+    <!-- นำเข้าฟอนต์ไทยหลากหลายสไตล์จาก Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Itim&family=Kanit:wght@400;700&family=Mali:wght@400;700&family=Prompt:wght@400;600;700&family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg: #000000; --accent: #18a0fb; --card-default: #ffffff; }
+        * { box-sizing: border-box; font-family: 'Prompt', sans-serif; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            margin: 0; background: var(--bg); display: flex; 
+            flex-direction: column; align-items: center; height: 100vh; 
+            padding: 10px; overflow: hidden; touch-action: none;
+        }
+
+        .header { text-align: center; color: white; margin-bottom: 8px; flex-shrink: 0; }
+        .header h2 { margin: 0; font-size: 1.1rem; font-weight: 700; }
+
+        /* Preview Canvas Area */
+        .preview-section { 
+            width: 100%; max-width: 450px; flex-grow: 1; 
+            display: flex; flex-direction: column; justify-content: center;
+            position: relative; min-height: 150px;
+        }
+        
+        .canvas-container {
+            width: 100%; aspect-ratio: 1 / 1; background: var(--card-default);
+            border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            position: relative; overflow: hidden; touch-action: none;
+            max-height: 38vh; margin: 0 auto;
+        }
+        canvas { width: 100%; height: 100%; display: block; }
+
+        /* Control UI สำหรับ Move/Scale/Rotate */
+        #object-controls {
+            position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.9); padding: 12px 20px; border-radius: 25px;
+            display: none; flex-direction: column; gap: 8px; width: 92%; z-index: 100;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .control-row { display: flex; align-items: center; gap: 12px; width: 100%; }
+        .control-row label { font-size: 10px; color: #aaa; min-width: 40px; }
+        input[type="range"] { flex-grow: 1; accent-color: var(--accent); }
+
+        .toolbar { 
+            width: 100%; max-width: 450px; display: flex; 
+            flex-direction: column; gap: 8px; margin-top: 10px;
+            flex-shrink: 0; padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .input-row { display: flex; gap: 8px; align-items: center; }
+        .input-field {
+            background: #1a1a1a; border: 1px solid #333;
+            border-radius: 12px; padding: 10px; color: white; font-size: 0.9rem;
+            outline: none; transition: 0.3s;
+        }
+        .input-field:focus { border-color: var(--accent); }
+
+        .font-bar { display: flex; gap: 6px; overflow-x: auto; padding: 4px 0; scrollbar-width: none; }
+        .font-bar::-webkit-scrollbar { display: none; }
+        .font-btn {
+            padding: 6px 14px; border-radius: 15px; background: #222;
+            color: white; border: 1px solid #444; cursor: pointer;
+            white-space: nowrap; font-size: 0.8rem;
+        }
+        .font-btn.active { background: var(--accent); border-color: white; }
+
+        .emoji-bar { display: flex; gap: 14px; overflow-x: auto; padding: 5px 0; scrollbar-width: none; }
+        .emoji-bar::-webkit-scrollbar { display: none; }
+        .emoji-btn { font-size: 1.8rem; cursor: pointer; flex-shrink: 0; }
+
+        .color-grid { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+        .color-btn { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; }
+        .color-btn.active { border-color: white; transform: scale(1.1); }
+
+        .btn-send {
+            width: 100%; background: var(--accent); color: white; border: none;
+            padding: 14px; border-radius: 15px; font-size: 1rem; font-weight: 700;
+            cursor: pointer; box-shadow: 0 4px 15px rgba(24, 160, 251, 0.4);
+        }
+
+        #edit-hint { position: absolute; top: -18px; left: 0; font-size: 0.7rem; color: var(--accent); font-weight: 700; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2>✍️ ออกแบบคำอวยพรของคุณ</h2>
+    </div>
+
+    <div class="preview-section">
+        <span id="edit-hint" style="display: none;">🎯 ปรับตำแหน่ง / ขนาด / มุมหมุน</span>
+        <div class="canvas-container" id="canvasBox">
+            <canvas id="previewCanvas"></canvas>
+            
+            <div id="object-controls">
+                <div class="control-row">
+                    <label>ขนาด</label>
+                    <input type="range" id="sizeSlider" min="10" max="400" value="60">
+                </div>
+                <div class="control-row">
+                    <label>หมุน</label>
+                    <input type="range" id="rotateSlider" min="0" max="360" value="0">
+                    <button onclick="deleteObject()" style="background:none; border:none; color:#ff4757; font-size:1.2rem; cursor:pointer; margin-left:10px;">🗑️</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toolbar">
+        <div class="font-bar" id="fontBar">
+            <div class="font-btn active" data-font="'Prompt', sans-serif">Prompt</div>
+            <div class="font-btn" data-font="'Mali', cursive">Mali</div>
+            <div class="font-btn" data-font="'Itim', cursive">Itim</div>
+            <div class="font-btn" data-font="'Kanit', sans-serif">Kanit</div>
+            <div class="font-btn" data-font="'Sarabun', sans-serif">Sarabun</div>
+        </div>
+
+        <div class="input-row">
+            <input type="text" id="gName" class="input-field" placeholder="ชื่อ..." maxlength="20" style="width: 100px;">
+            <div class="color-grid" id="colorGrid" style="flex: 1;">
+                <div class="color-btn active" style="background: #ffffff;" data-color="#ffffff"></div>
+                <div class="color-btn" style="background: #fff9c4;" data-color="#fff9c4"></div>
+                <div class="color-btn" style="background: #ffcdd2;" data-color="#ffcdd2"></div>
+                <div class="color-btn" style="background: #c8e6c9;" data-color="#c8e6c9"></div>
+                <div class="color-btn" style="background: #bbdefb;" data-color="#bbdefb"></div>
+            </div>
+        </div>
+        
+        <div class="emoji-bar" id="emojiBar">
+            <span class="emoji-btn">❤️</span><span class="emoji-btn">✨</span><span class="emoji-btn">🎉</span>
+            <span class="emoji-btn">🎂</span><span class="emoji-btn">🥳</span><span class="emoji-btn">🎈</span>
+            <span class="emoji-btn">🥂</span><span class="emoji-btn">🌟</span><span class="emoji-btn">🌈</span>
+            <span class="emoji-btn">🎁</span><span class="emoji-btn">🚀</span><span class="emoji-btn">🫶</span>
+            <span class="emoji-btn">🤟</span><span class="emoji-btn">👏</span><span class="emoji-btn">🔥</span>
+        </div>
+
+        <div class="input-row">
+            <textarea id="gMessage" class="input-field" placeholder="พิมพ์ข้อความ... (เคาะบรรทัดได้)" style="flex: 1; height: 45px; resize: none;"></textarea>
+            <button onclick="addTextAsObject()" class="btn-send" style="width: auto; padding: 8px 15px; font-size: 0.8rem;">แปะ</button>
+        </div>
+        
+        <button class="btn-send" id="sendBtn">ส่งงานออกแบบขึ้นจอ 🚀</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        // ใช้ Firebase Config เดิมที่คุณให้มา
+        const firebaseConfig = {
+            apiKey: "AIzaSyAA8cksEKdFZ6pDBKgaT0FLL4-uylLyx9c",
+            authDomain: "companyanniversarytest.firebaseapp.com",
+            databaseURL: "https://companyanniversarytest-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "companyanniversarytest",
+            storageBucket: "companyanniversarytest.firebasestorage.app",
+            messagingSenderId: "698195391398",
+            appId: "1:698195391398:web:f677fe2869792766121567",
+            measurementId: "G-EGH983F7VF"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const canvas = document.getElementById('previewCanvas');
+        const ctx = canvas.getContext('2d');
+        const canvasBox = document.getElementById('canvasBox');
+        
+        const gName = document.getElementById('gName');
+        const gMessage = document.getElementById('gMessage');
+        const sizeSlider = document.getElementById('sizeSlider');
+        const rotateSlider = document.getElementById('rotateSlider');
+        const editHint = document.getElementById('edit-hint');
+        const objectControls = document.getElementById('object-controls');
+
+        let objects = []; 
+        let selectedId = null;
+        let isDragging = false;
+        let currentColor = "#ffffff";
+        let currentFont = "'Prompt', sans-serif";
+
+        function initCanvas() {
+            canvas.width = 800;
+            canvas.height = 800;
+            draw();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const contrast = getContrastColor(currentColor);
+
+            // 1. วาดชื่อแขก (คงที่ด้านล่าง)
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillStyle = contrast;
+            ctx.font = `bold 28px ${currentFont}`;
+            ctx.globalAlpha = 0.5;
+            ctx.fillText("• " + (gName.value || "ชื่อของคุณ") + " •", 400, 740);
+            ctx.globalAlpha = 1.0;
+
+            // 2. วาดวัตถุทั้งหมด
+            objects.forEach((obj, idx) => {
+                ctx.save();
+                ctx.translate(obj.x, obj.y);
+                ctx.rotate((obj.rotation || 0) * Math.PI / 180);
+
+                if (obj.type === 'text') {
+                    const lines = obj.content.split('\n');
+                    const lineHeight = obj.size * 1.2;
+                    ctx.font = `bold ${obj.size}px ${obj.font || currentFont}`;
+                    ctx.fillStyle = contrast;
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+
+                    const totalHeight = (lines.length - 1) * lineHeight;
+                    lines.forEach((line, i) => {
+                        const yOffset = (i * lineHeight) - (totalHeight / 2);
+                        ctx.fillText(line, 0, yOffset);
+                    });
+
+                    if (idx === selectedId) {
+                        ctx.strokeStyle = "var(--accent)";
+                        ctx.lineWidth = 4;
+                        ctx.setLineDash([10, 10]);
+                        let maxW = 0;
+                        lines.forEach(l => {
+                            const w = ctx.measureText(l).width;
+                            if(w > maxW) maxW = w;
+                        });
+                        const h = lines.length * lineHeight;
+                        const w = maxW > obj.size ? maxW : obj.size;
+                        ctx.strokeRect(-w/1.8, -h/1.8, w * 1.1, h * 1.1);
+                    }
+                } else {
+                    ctx.font = `${obj.size}px Arial`;
+                    ctx.fillStyle = "#000";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText(obj.content, 0, 0);
+
+                    if (idx === selectedId) {
+                        ctx.strokeStyle = "var(--accent)";
+                        ctx.lineWidth = 4;
+                        ctx.setLineDash([10, 10]);
+                        const w = obj.size;
+                        ctx.strokeRect(-w/1.8, -w/1.8, w * 1.1, w * 1.1);
+                    }
+                }
+                ctx.restore();
+            });
+        }
+
+        window.addTextAsObject = () => {
+            const txt = gMessage.value.trim();
+            if (!txt) return;
+            const lines = txt.split('\n');
+            let initialSize = 60;
+            if(lines.length > 3) initialSize = 40;
+            
+            objects.push({ 
+                type: 'text', 
+                content: txt, 
+                x: 400, 
+                y: 400, 
+                size: initialSize, 
+                font: currentFont, 
+                rotation: 0 
+            });
+            gMessage.value = "";
+            selectedId = objects.length - 1;
+            updateUI();
+            draw();
+        };
+
+        document.getElementById('emojiBar').addEventListener('click', (e) => {
+            if (e.target.classList.contains('emoji-btn')) {
+                objects.push({ type: 'emoji', content: e.target.innerText, x: 400, y: 400, size: 100, rotation: 0 });
+                selectedId = objects.length - 1;
+                updateUI();
+                draw();
+            }
+        });
+
+        document.getElementById('fontBar').addEventListener('click', (e) => {
+            if (e.target.classList.contains('font-btn')) {
+                document.querySelectorAll('.font-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                currentFont = e.target.dataset.font;
+                if (selectedId !== null && objects[selectedId].type === 'text') {
+                    objects[selectedId].font = currentFont;
+                }
+                draw();
+            }
+        });
+
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                x: ((clientX - rect.left) / rect.width) * canvas.width,
+                y: ((clientY - rect.top) / rect.height) * canvas.height
+            };
+        }
+
+        function handleStart(e) {
+            const pos = getPos(e);
+            let hit = -1;
+            for (let i = objects.length - 1; i >= 0; i--) {
+                const obj = objects[i];
+                const dist = Math.sqrt((obj.x - pos.x)**2 + (obj.y - pos.y)**2);
+                if (dist < obj.size * 0.9) { hit = i; break; }
+            }
+            selectedId = (hit !== -1) ? hit : null;
+            if (selectedId !== null) {
+                isDragging = true;
+                const selected = objects.splice(selectedId, 1)[0];
+                objects.push(selected);
+                selectedId = objects.length - 1;
+            }
+            updateUI();
+            draw();
+        }
+
+        function handleMove(e) {
+            if (!isDragging || selectedId === null) return;
+            const pos = getPos(e);
+            objects[selectedId].x = pos.x;
+            objects[selectedId].y = pos.y;
+            draw();
+        }
+
+        function handleEnd() { isDragging = false; }
+
+        canvas.addEventListener('mousedown', handleStart);
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('mouseup', handleEnd);
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleStart(e); }, {passive:false});
+        window.addEventListener('touchmove', (e) => { handleMove(e); }, {passive:false});
+        window.addEventListener('touchend', handleEnd);
+
+        function updateUI() {
+            if (selectedId !== null) {
+                editHint.style.display = 'block';
+                objectControls.style.display = 'flex';
+                sizeSlider.value = objects[selectedId].size;
+                rotateSlider.value = objects[selectedId].rotation || 0;
+            } else {
+                editHint.style.display = 'none';
+                objectControls.style.display = 'none';
+            }
+        }
+
+        sizeSlider.oninput = (e) => {
+            if (selectedId !== null) {
+                objects[selectedId].size = parseInt(e.target.value);
+                draw();
+            }
+        };
+
+        rotateSlider.oninput = (e) => {
+            if (selectedId !== null) {
+                objects[selectedId].rotation = parseInt(e.target.value);
+                draw();
+            }
+        };
+
+        window.deleteObject = () => {
+            if (selectedId !== null) {
+                objects.splice(selectedId, 1);
+                selectedId = null;
+                updateUI();
+                draw();
+            }
+        };
+
+        gName.oninput = draw;
+
+        const colorBtns = document.querySelectorAll('.color-btn');
+        colorBtns.forEach(btn => {
+            btn.onclick = () => {
+                colorBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentColor = btn.dataset.color;
+                canvasBox.style.backgroundColor = currentColor;
+                draw();
+            };
+        });
+
+        document.getElementById('sendBtn').onclick = async function() {
+            if (objects.length === 0) { alert("กรุณาออกแบบก่อนส่งครับ"); return; }
+            this.disabled = true; this.innerText = "กำลังส่ง...";
+            selectedId = null; draw();
+            const dataUrl = canvas.toDataURL('image/png');
+            push(ref(db, 'wishes'), {
+                name: gName.value || "แขก",
+                image: dataUrl,
+                type: 'handwriting',
+                color: currentColor,
+                timestamp: Date.now()
+            }).then(() => {
+                alert("ส่งคำอวยพรเรียบร้อย! 🎉");
+                location.reload(); 
+            });
+        };
+
+        function getContrastColor(hex){
+            hex = hex.replace("#", "");
+            let r = parseInt(hex.substr(0,2),16), g = parseInt(hex.substr(2,2),16), b = parseInt(hex.substr(4,2),16);
+            return (((r*299)+(g*587)+(b*114))/1000 >= 128) ? '#1a1a1a' : '#ffffff';
+        }
+
+        window.onload = initCanvas;
+    </script>
+</body>
+</html>
