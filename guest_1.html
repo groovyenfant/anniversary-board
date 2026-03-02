@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>วาดคำอวยพรของคุณ ✨</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg: #1e1e1e; --card: #ffffff; --accent: #18a0fb; }
+        * { box-sizing: border-box; font-family: 'Prompt', sans-serif; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            margin: 0; 
+            background: var(--bg); 
+            display: flex; 
+            flex-direction: column;
+            align-items: center; 
+            min-height: 100vh;
+            touch-action: none;
+        }
+
+        .header { width: 100%; padding: 15px; text-align: center; color: white; }
+        .header h2 { margin: 0; font-size: 18px; }
+
+        .canvas-container {
+            width: 92vw;
+            height: 50vh;
+            background: white; /* สีเริ่มต้น */
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            position: relative;
+            transition: background-color 0.3s ease;
+            margin-bottom: 10px;
+        }
+
+        canvas { width: 100%; height: 100%; cursor: crosshair; background: transparent; }
+
+        .toolbar {
+            width: 92vw;
+            background: rgba(255,255,255,0.08);
+            padding: 15px;
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .tool-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+        
+        .label { font-size: 11px; color: #aaa; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* Palette สีปากกา */
+        .color-palette {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 5px;
+            flex-wrap: wrap;
+        }
+        .color-swatch {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.2);
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .color-swatch.active {
+            border-color: white;
+            transform: scale(1.15);
+            box-shadow: 0 0 12px rgba(255,255,255,0.4);
+        }
+
+        .picker-circle { 
+            width: 32px; height: 32px; border-radius: 50%; border: 2px solid white; 
+            overflow: hidden; padding: 0; background: none; position: relative;
+        }
+        .picker-circle input[type="color"] { 
+            position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; 
+            border: none; cursor: pointer; 
+        }
+
+        .btn {
+            border: none; padding: 12px 20px; border-radius: 12px; 
+            font-weight: 700; cursor: pointer; transition: 0.2s;
+        }
+        .btn-clear { background: #444; color: white; padding: 10px 15px; font-size: 13px; }
+        .btn-send { background: var(--accent); color: white; flex-grow: 1; font-size: 16px; margin-top: 5px; box-shadow: 0 4px 15px rgba(24, 160, 251, 0.4); }
+        .btn-send:active { transform: scale(0.98); }
+
+        .name-input {
+            width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #444;
+            background: #2a2a2a; color: white; font-size: 15px; outline: none;
+        }
+
+        select {
+            background: #2a2a2a; color: white; border: 1px solid #444; padding: 8px; 
+            border-radius: 10px; font-size: 13px; outline: none; width: 85px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2>🎨 วาดลายเส้นเพื่ออวยพร</h2>
+    </div>
+
+    <div class="canvas-container" id="canvasBox">
+        <canvas id="drawCanvas"></canvas>
+    </div>
+
+    <div class="toolbar">
+        <input type="text" id="gName" class="name-input" placeholder="ใส่ชื่อของคุณ..." maxlength="20">
+        
+        <div>
+            <div class="label">สีปากกา</div>
+            <div class="color-palette" id="palette">
+                <div class="color-swatch active" style="background: #18a0fb;" data-color="#18a0fb"></div>
+                <div class="color-swatch" style="background: #000000;" data-color="#000000"></div>
+                <div class="color-swatch" style="background: #ff4757;" data-color="#ff4757"></div>
+                <div class="color-swatch" style="background: #2ed573;" data-color="#2ed573"></div>
+                <div class="color-swatch" style="background: #ffa502;" data-color="#ffa502"></div>
+                <div class="picker-circle">
+                    <input type="color" id="penColor" value="#18a0fb">
+                </div>
+            </div>
+        </div>
+
+        <div class="tool-row">
+            <div>
+                <div class="label">สี Post-it</div>
+                <div class="picker-circle">
+                    <input type="color" id="noteColor" value="#ffffff">
+                </div>
+            </div>
+            
+            <div>
+                <div class="label">เส้นปากกา</div>
+                <select id="penSize">
+                    <option value="3">เล็ก</option>
+                    <option value="6" selected>กลาง</option>
+                    <option value="12">ใหญ่</option>
+                </select>
+            </div>
+            
+            <button class="btn btn-clear" onclick="clearCanvas()">ล้างจอ ✕</button>
+        </div>
+
+        <button class="btn btn-send" id="sendBtn">ส่งงานวาดขึ้นจอใหญ่ 🚀</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        // Firebase Configuration (เชื่อมกับ index_1.html)
+        const firebaseConfig = {
+            apiKey: "AIzaSyAA8cksEKdFZ6pDBKgaT0FLL4-uylLyx9c",
+            authDomain: "companyanniversarytest.firebaseapp.com",
+            databaseURL: "https://companyanniversarytest-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "companyanniversarytest",
+            storageBucket: "companyanniversarytest.firebasestorage.app",
+            messagingSenderId: "698195391398",
+            appId: "1:698195391398:web:f677fe2869792766121567",
+            measurementId: "G-EGH983F7VF"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const canvas = document.getElementById('drawCanvas');
+        const canvasBox = document.getElementById('canvasBox');
+        const ctx = canvas.getContext('2d');
+        const penColorInput = document.getElementById('penColor');
+        const noteColorInput = document.getElementById('noteColor');
+        
+        let drawing = false;
+        let currentPenColor = penColorInput.value;
+
+        // เปลี่ยนสีพื้นหลังกระดานตามสี Post-it
+        noteColorInput.oninput = (e) => {
+            canvasBox.style.backgroundColor = e.target.value;
+        };
+
+        // ระบบเลือกสีปากกาจาก Palette
+        const swatches = document.querySelectorAll('.color-swatch');
+        swatches.forEach(swatch => {
+            swatch.onclick = () => {
+                swatches.forEach(s => s.classList.remove('active'));
+                swatch.classList.add('active');
+                currentPenColor = swatch.dataset.color;
+                penColorInput.value = currentPenColor;
+            };
+        });
+
+        penColorInput.oninput = (e) => {
+            currentPenColor = e.target.value;
+            swatches.forEach(s => s.classList.remove('active'));
+        };
+
+        // จัดการขนาด Canvas
+        function resize() {
+            // ดึงค่าสัดส่วนจริงของหน้าจอมาใช้เพื่อให้เส้นไม่เพี้ยน
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+        }
+        window.addEventListener('load', resize);
+        window.addEventListener('resize', resize);
+
+        // Drawing Logic (Mouse & Touch)
+        function getCoords(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+            const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+            return { x, y };
+        }
+
+        function startDraw(e) {
+            drawing = true;
+            const coords = getCoords(e);
+            ctx.beginPath();
+            ctx.moveTo(coords.x, coords.y);
+        }
+
+        function draw(e) {
+            if (!drawing) return;
+            const coords = getCoords(e);
+            ctx.lineWidth = document.getElementById('penSize').value;
+            ctx.strokeStyle = currentPenColor;
+            ctx.lineTo(coords.x, coords.y);
+            ctx.stroke();
+        }
+
+        function endDraw() {
+            drawing = false;
+        }
+
+        canvas.addEventListener('mousedown', startDraw);
+        canvas.addEventListener('mousemove', draw);
+        window.addEventListener('mouseup', endDraw);
+
+        canvas.addEventListener('touchstart', (e) => { if(e.cancelable) e.preventDefault(); startDraw(e); }, {passive: false});
+        canvas.addEventListener('touchmove', (e) => { if(e.cancelable) e.preventDefault(); draw(e); }, {passive: false});
+        canvas.addEventListener('touchend', endDraw);
+
+        window.clearCanvas = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        };
+
+        // ส่งข้อมูลไปยัง Firebase
+        document.getElementById('sendBtn').onclick = async function() {
+            const name = document.getElementById('gName').value;
+            const noteColor = document.getElementById('noteColor').value;
+            
+            // ตรวจสอบว่ามีการวาดหรือไม่ (เช็คความว่างเปล่าเบื้องต้น)
+            const blank = document.createElement('canvas');
+            blank.width = canvas.width;
+            blank.height = canvas.height;
+            if (canvas.toDataURL() === blank.toDataURL()) {
+                alert("กรุณาวาดข้อความก่อนส่งครับ");
+                return;
+            }
+
+            const imageData = canvas.toDataURL('image/png');
+            
+            this.disabled = true;
+            this.innerText = "กำลังส่งผลงาน...";
+
+            push(ref(db, 'wishes'), {
+                name: name || "แขกนิรนาม",
+                image: imageData,
+                type: 'handwriting',
+                color: noteColor,
+                timestamp: Date.now()
+            }).then(() => {
+                alert("ส่งลายเส้นของคุณขึ้นจอใหญ่แล้ว! 🎉");
+                clearCanvas();
+                this.disabled = false;
+                this.innerText = "ส่งงานวาดขึ้นจอใหญ่ 🚀";
+            }).catch((err) => {
+                alert("เกิดข้อผิดพลาด: " + err.message);
+                this.disabled = false;
+                this.innerText = "ส่งงานวาดขึ้นจอใหญ่ 🚀";
+            });
+        };
+    </script>
+</body>
+</html>
