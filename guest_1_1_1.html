@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>วาดและออกแบบคำอวยพร ✨</title>
+    <title>วาดและออกแบบตามสัดส่วนภาพ ✨</title>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #000000; --accent: #18a0fb; --card-default: #ffffff; }
@@ -11,26 +11,29 @@
         
         body { 
             margin: 0; background: var(--bg); display: flex; 
-            flex-direction: column; align-items: center; height: 100vh; 
-            padding: 10px; overflow: hidden; touch-action: none;
+            flex-direction: column; align-items: center; min-height: 100vh; 
+            padding: 10px; touch-action: none;
         }
 
         .header { text-align: center; color: white; margin-bottom: 8px; flex-shrink: 0; }
         .header h2 { margin: 0; font-size: 1.1rem; font-weight: 700; }
 
         .preview-section { 
-            width: 100%; max-width: 450px; flex-grow: 1; 
+            width: 100%; max-width: 500px; flex-grow: 1; 
             display: flex; flex-direction: column; justify-content: center;
-            position: relative; min-height: 150px;
+            position: relative; min-height: 100px;
         }
         
         .canvas-container {
-            width: 100%; aspect-ratio: 1 / 1; background: var(--card-default);
-            border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            width: 100%; 
+            background: var(--card-default);
+            border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
             position: relative; overflow: hidden; touch-action: none;
-            max-height: 38vh; margin: 0 auto;
-            background-size: cover;
+            margin: 0 auto;
+            background-size: contain;
+            background-repeat: no-repeat;
             background-position: center;
+            transition: height 0.3s ease;
         }
         canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; }
         #uiCanvas { pointer-events: none; z-index: 5; }
@@ -41,13 +44,12 @@
             display: none; align-items: center; gap: 12px; width: 92%; z-index: 100;
             border: 1px solid rgba(255,255,255,0.1);
             box-shadow: 0 5px 20px rgba(0,0,0,0.5);
-            /* ป้องกันการกดทะลุลงไปในกระดาน */
             pointer-events: auto;
         }
         #object-controls input { flex-grow: 1; accent-color: var(--accent); }
 
         .toolbar { 
-            width: 100%; max-width: 450px; display: flex; 
+            width: 100%; max-width: 500px; display: flex; 
             flex-direction: column; gap: 8px; margin-top: 10px;
             flex-shrink: 0; padding-bottom: env(safe-area-inset-bottom);
         }
@@ -70,7 +72,6 @@
         .emoji-bar { display: flex; gap: 12px; overflow-x: auto; padding: 5px 0; scrollbar-width: none; }
         .emoji-bar::-webkit-scrollbar { display: none; }
         .emoji-btn { font-size: 1.8rem; cursor: pointer; flex-shrink: 0; transition: transform 0.2s; }
-        .emoji-btn:active { transform: scale(1.3); }
 
         .color-grid { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-start; flex: 1; }
         .color-swatch { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; }
@@ -82,19 +83,21 @@
             cursor: pointer; box-shadow: 0 4px 15px rgba(24, 160, 251, 0.4);
         }
 
-        .mode-label { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.5); color: white; font-size: 0.65rem; padding: 4px 10px; border-radius: 12px; z-index: 10; pointer-events: none; }
-        
+        .mode-label { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.5); color: white; font-size: 0.6rem; padding: 4px 10px; border-radius: 12px; z-index: 10; pointer-events: none; }
+
+        /* แถบปรับขนาดเส้น */
         .brush-size-panel {
             display: flex; align-items: center; gap: 10px; background: #1a1a1a; padding: 5px 15px; border-radius: 10px; border: 1px solid #333;
         }
         .brush-size-panel label { font-size: 10px; color: #888; white-space: nowrap; }
-        .brush-size-panel input { accent-color: var(--accent); flex: 1; }
+        .brush-size-panel input { accent-color: var(--accent); flex: 1; height: 20px; }
+        #brushSizeVal { color: white; font-size: 12px; min-width: 20px; text-align: center; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <h2>🎨 วาดและออกแบบคำอวยพร</h2>
+        <h2>🎨 วาด ตกแต่ง และปรับสัดส่วนภาพ</h2>
     </div>
 
     <div class="preview-section">
@@ -104,9 +107,9 @@
             <canvas id="uiCanvas"></canvas>
             
             <div id="object-controls">
-                <span id="controlLabel" style="font-size: 10px; color: white; min-width: 40px;">สเกล:</span>
-                <input type="range" id="sizeSlider" min="20" max="500" value="100">
-                <button id="deleteBtn" onclick="deleteObject()" style="background:none; border:none; color:#ff4757; font-size:1.5rem; cursor:pointer; padding-left: 10px;">🗑️</button>
+                <span id="controlLabel" style="font-size: 10px; color: white;">สเกล:</span>
+                <input type="range" id="sizeSlider" min="20" max="600" value="150">
+                <button onclick="deleteObject()" style="background:none; border:none; color:#ff4757; font-size:1.5rem; cursor:pointer;">🗑️</button>
             </div>
         </div>
     </div>
@@ -121,34 +124,35 @@
             <span class="emoji-btn">🍀</span><span class="emoji-btn">💎</span><span class="emoji-btn">👏</span>
         </div>
 
+        <!-- กลับมาแล้ว: แถบปรับขนาดเส้น -->
         <div class="brush-size-panel" id="brushSizePanel">
             <label>ขนาดเส้น:</label>
             <input type="range" id="brushSizeSlider" min="2" max="60" value="6">
-            <span id="brushSizeVal" style="color: white; font-size: 12px; min-width: 20px;">6</span>
+            <span id="brushSizeVal">6</span>
         </div>
 
         <div class="row">
-            <div class="color-grid" id="colorGrid">
-                <!-- Colors injected by JS -->
-            </div>
+            <div class="color-grid" id="colorGrid"></div>
             <div style="display: flex; gap: 4px;">
-                <button class="btn-tool active" id="penTool" onclick="setMode('draw')">✏️ วาด</button>
-                <button class="btn-tool" id="moveTool" onclick="setMode('edit')">🎯 ย้าย</button>
-                <button class="btn-tool" id="eraserTool" onclick="setMode('eraser')">🧽 ลบ</button>
+                <button class="btn-tool active" id="penTool" onclick="setMode('draw')">✏️</button>
+                <button class="btn-tool" id="moveTool" onclick="setMode('edit')">🎯</button>
+                <button class="btn-tool" id="eraserTool" onclick="setMode('eraser')">🧽</button>
             </div>
         </div>
 
         <div class="row">
-            <input type="text" id="gName" class="input-field" placeholder="ใส่ชื่อของคุณ..." maxlength="20">
+            <input type="text" id="gName" class="input-field" placeholder="ชื่อของคุณ..." maxlength="20">
             <div style="display: flex; gap: 4px;">
                 <button class="btn-tool" onclick="undo()" title="Undo">↩️</button>
-                <button class="btn-tool" onclick="document.getElementById('bgUpload').click()" title="ใส่พื้นหลัง">🖼️</button>
+                <button class="btn-tool" onclick="document.getElementById('stickerUpload').click()" title="แปะรูปภาพ">📸</button>
+                <button class="btn-tool" onclick="document.getElementById('bgUpload').click()" title="เปลี่ยนพื้นหลัง">🖼️</button>
+                <input type="file" id="stickerUpload" accept="image/*" style="display:none">
                 <input type="file" id="bgUpload" accept="image/*" style="display:none">
                 <input type="color" id="noteColor" value="#ffffff" style="width:35px; height:35px; border:none; background:none; cursor:pointer;">
             </div>
         </div>
         
-        <button class="btn-send" id="sendBtn">ส่งคำอวยพรขึ้นจอใหญ่ 🚀</button>
+        <button class="btn-send" id="sendBtn">ส่งงานอวยพรขึ้นจอใหญ่ 🚀</button>
     </div>
 
     <script type="module">
@@ -183,6 +187,7 @@
         const modeIndicator = document.getElementById('modeIndicator');
         const brushSizePanel = document.getElementById('brushSizePanel');
         const bgUpload = document.getElementById('bgUpload');
+        const stickerUpload = document.getElementById('stickerUpload');
 
         // --- State ---
         let objects = [];   
@@ -190,19 +195,16 @@
         let currentMode = 'draw'; 
         let currentPenColor = '#000000';
         let currentBrushSize = 6;
-        let isDrawing = false;
-        let isDragging = false;
+        let isDrawing = false, isDragging = false;
         let selectedId = null;
         let lastX, lastY;
         let bgImage = null;
+        let currentRatio = 1;
 
         const colors = ["#000000", "#555555", "#ffffff", "#ff4757", "#ff6b81", "#ffa502", "#eccc68", "#2ed573", "#1e90ff", "#18a0fb", "#70a1ff", "#6c5ce7"];
 
         function init() {
-            canvas.width = 800;
-            canvas.height = 800;
-            uiCanvas.width = 800;
-            uiCanvas.height = 800;
+            setCanvasSize(1);
 
             const grid = document.getElementById('colorGrid');
             colors.forEach(c => {
@@ -218,7 +220,6 @@
                 grid.appendChild(div);
             });
 
-            // ป้องกันเหตุการณ์คลิกที่แถบควบคุมไม่ให้ลงไปถึงกระดานพื้นหลัง
             objectControls.addEventListener('mousedown', (e) => e.stopPropagation());
             objectControls.addEventListener('touchstart', (e) => e.stopPropagation());
 
@@ -226,80 +227,85 @@
             render();
         }
 
+        function setCanvasSize(ratio) {
+            currentRatio = ratio;
+            const baseWidth = 800;
+            const targetHeight = baseWidth * ratio;
+            canvas.width = baseWidth;
+            canvas.height = targetHeight;
+            uiCanvas.width = baseWidth;
+            uiCanvas.height = targetHeight;
+            canvasBox.style.height = (canvasBox.offsetWidth * ratio) + "px";
+        }
+
         function saveHistory() {
             const snapshot = {
                 imageData: ctx.getImageData(0, 0, canvas.width, canvas.height),
-                objects: JSON.parse(JSON.stringify(objects)),
-                bgImageSrc: bgImage ? bgImage.src : null
+                objects: objects.map(obj => ({...obj})),
+                bgImageSrc: bgImage ? bgImage.src : null,
+                ratio: currentRatio
             };
             history.push(snapshot);
-            if (history.length > 30) history.shift();
+            if (history.length > 25) history.shift();
         }
 
         window.undo = () => {
             if (history.length > 1) {
                 history.pop();
                 const last = history[history.length - 1];
-                ctx.putImageData(last.imageData, 0, 0);
-                objects = JSON.parse(JSON.stringify(last.objects));
-                
+                setCanvasSize(last.ratio);
                 if (last.bgImageSrc) {
                     const img = new Image();
-                    img.onload = () => {
-                        bgImage = img;
-                        canvasBox.style.backgroundImage = `url(${img.src})`;
-                    };
+                    img.onload = () => { bgImage = img; canvasBox.style.backgroundImage = `url(${img.src})`; };
                     img.src = last.bgImageSrc;
                 } else {
                     bgImage = null;
                     canvasBox.style.backgroundImage = 'none';
                 }
-                
-                selectedId = null;
-                updateUI();
-                render();
+                setTimeout(() => {
+                    ctx.putImageData(last.imageData, 0, 0);
+                    objects = [...last.objects];
+                    selectedId = null;
+                    updateUI();
+                    render();
+                }, 50);
             }
         };
 
         window.setMode = (mode, keepSelection = false) => {
             currentMode = mode;
             if (!keepSelection) selectedId = null;
-            
             document.querySelectorAll('.btn-tool').forEach(b => b.classList.remove('active'));
+            document.getElementById(mode === 'draw' ? 'penTool' : (mode === 'edit' ? 'moveTool' : 'eraserTool')).classList.add('active');
             
-            if(mode === 'draw') {
-                document.getElementById('penTool').classList.add('active');
+            if (mode === 'draw') {
                 modeIndicator.innerText = "โหมด: วาดรูป";
                 brushSizePanel.style.display = 'flex';
-            } else if(mode === 'edit') {
-                document.getElementById('moveTool').classList.add('active');
-                modeIndicator.innerText = "โหมด: ย้าย/ปรับขนาดอีโมจิ";
+            } else if (mode === 'edit') {
+                modeIndicator.innerText = "โหมด: ย้าย/สเกลวัตถุ";
                 brushSizePanel.style.display = 'none';
-            } else if(mode === 'eraser') {
-                document.getElementById('eraserTool').classList.add('active');
-                modeIndicator.innerText = "โหมด: ยางลบลายเส้น";
+            } else {
+                modeIndicator.innerText = "โหมด: ยางลบ";
                 brushSizePanel.style.display = 'flex';
             }
-            updateUI();
-            render();
+            updateUI(); render();
         };
 
         function render() {
             uiCtx.clearRect(0, 0, uiCanvas.width, uiCanvas.height);
-            
             objects.forEach((obj, idx) => {
-                uiCtx.font = `${obj.size}px Arial`;
-                uiCtx.textAlign = 'center';
-                uiCtx.textBaseline = 'middle';
-                uiCtx.fillText(obj.content, obj.x, obj.y);
-
+                if (obj.type === 'emoji') {
+                    uiCtx.font = `${obj.size}px Arial`;
+                    uiCtx.textAlign = 'center'; uiCtx.textBaseline = 'middle';
+                    uiCtx.fillText(obj.content, obj.x, obj.y);
+                } else if (obj.type === 'image' && obj.img) {
+                    const h = obj.size * (obj.img.height / obj.img.width);
+                    uiCtx.drawImage(obj.img, obj.x - obj.size/2, obj.y - h/2, obj.size, h);
+                }
                 if (idx === selectedId && currentMode === 'edit') {
-                    uiCtx.save();
-                    uiCtx.strokeStyle = "var(--accent)";
-                    uiCtx.lineWidth = 4;
-                    uiCtx.setLineDash([10, 10]);
-                    const padding = obj.size * 0.1;
-                    uiCtx.strokeRect(obj.x - obj.size/2 - padding, obj.y - obj.size/2 - padding, obj.size + padding*2, obj.size + padding*2);
+                    uiCtx.save(); uiCtx.strokeStyle = "var(--accent)"; uiCtx.lineWidth = 4; uiCtx.setLineDash([10, 10]);
+                    const h = obj.type === 'image' ? obj.size * (obj.img.height / obj.img.width) : obj.size;
+                    uiCtx.strokeRect(obj.x - obj.size/2 - 5, obj.y - h/2 - 5, obj.size + 10, h + 10);
                     uiCtx.restore();
                 }
             });
@@ -321,21 +327,15 @@
                 let hit = -1;
                 for (let i = objects.length - 1; i >= 0; i--) {
                     const obj = objects[i];
-                    const dist = Math.sqrt((obj.x - pos.x)**2 + (obj.y - pos.y)**2);
-                    if (dist < obj.size * 0.8) { hit = i; break; }
+                    const h = obj.type === 'image' ? obj.size * (obj.img.height / obj.img.width) : obj.size;
+                    if (Math.abs(obj.x - pos.x) < obj.size/2 && Math.abs(obj.y - pos.y) < h/2) { hit = i; break; }
                 }
                 selectedId = (hit !== -1) ? hit : null;
-                if (selectedId !== null) {
-                    isDragging = true;
-                    updateUI(); // ทริกเกอร์ให้ Slider แสดงผลพร้อมค่าที่ถูกต้อง
-                } else {
-                    updateUI(); // ซ่อนแถบถ้ากดที่ว่าง
-                }
+                if (selectedId !== null) isDragging = true;
+                updateUI();
             } else {
-                isDrawing = true;
-                [lastX, lastY] = [pos.x, pos.y];
-                ctx.beginPath();
-                ctx.moveTo(lastX, lastY);
+                isDrawing = true; [lastX, lastY] = [pos.x, pos.y];
+                ctx.beginPath(); ctx.moveTo(lastX, lastY);
             }
             render();
         }
@@ -343,77 +343,69 @@
         function handleMove(e) {
             const pos = getPos(e);
             if (isDragging && selectedId !== null) {
-                objects[selectedId].x = pos.x;
-                objects[selectedId].y = pos.y;
+                objects[selectedId].x = pos.x; objects[selectedId].y = pos.y;
                 render();
             } else if (isDrawing) {
                 ctx.lineWidth = currentBrushSize;
                 if(currentMode === 'eraser') ctx.lineWidth = currentBrushSize * 4;
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
+                ctx.lineCap = 'round'; ctx.lineJoin = 'round';
                 ctx.globalCompositeOperation = currentMode === 'eraser' ? 'destination-out' : 'source-over';
                 ctx.strokeStyle = currentPenColor;
-                ctx.lineTo(pos.x, pos.y);
-                ctx.stroke();
-                [lastX, lastY] = [pos.x, pos.y];
+                ctx.lineTo(pos.x, pos.y); ctx.stroke();
             }
         }
 
-        function handleEnd() {
-            if(isDrawing || isDragging) saveHistory();
-            isDrawing = false;
-            isDragging = false;
-            ctx.globalCompositeOperation = 'source-over';
-        }
+        function handleEnd() { if(isDrawing || isDragging) saveHistory(); isDrawing = false; isDragging = false; ctx.globalCompositeOperation = 'source-over'; }
 
         canvasBox.addEventListener('mousedown', handleStart);
         window.addEventListener('mousemove', handleMove);
         window.addEventListener('mouseup', handleEnd);
-        canvasBox.addEventListener('touchstart', (e) => { 
-            // ป้องกัน Scroll หน้าขณะวาด แต่ปล่อยผ่านถ้าแตะที่แถบควบคุม
-            if (!e.target.closest('#object-controls')) {
-                e.preventDefault(); 
-                handleStart(e); 
-            }
-        }, {passive:false});
+        canvasBox.addEventListener('touchstart', (e) => { if (!e.target.closest('#object-controls')) { e.preventDefault(); handleStart(e); } }, {passive:false});
         window.addEventListener('touchmove', (e) => { if (isDrawing || isDragging) handleMove(e); }, {passive:false});
         window.addEventListener('touchend', handleEnd);
 
         document.getElementById('emojiBar').addEventListener('click', (e) => {
             if (e.target.classList.contains('emoji-btn')) {
-                const newObj = {
-                    type: 'emoji',
-                    content: e.target.innerText,
-                    x: canvas.width / 2,
-                    y: canvas.height / 2,
-                    size: 120
-                };
-                objects.push(newObj);
-                selectedId = objects.length - 1;
-                window.setMode('edit', true); 
-                saveHistory();
-                render();
+                objects.push({ type: 'emoji', content: e.target.innerText, x: canvas.width/2, y: canvas.height/2, size: 120 });
+                selectedId = objects.length - 1; window.setMode('edit', true); saveHistory(); render();
             }
         });
 
-        window.deleteObject = () => {
-            if (selectedId !== null) {
-                objects.splice(selectedId, 1);
-                selectedId = null;
-                saveHistory();
-                updateUI();
-                render();
-            }
+        bgUpload.onchange = (e) => {
+            const file = e.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    bgImage = img;
+                    setCanvasSize(img.height / img.width);
+                    canvasBox.style.backgroundImage = `url(${event.target.result})`;
+                    saveHistory();
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
         };
 
-        sizeSlider.oninput = (e) => {
-            if (selectedId !== null) {
-                objects[selectedId].size = parseInt(e.target.value);
-                render();
-            }
+        stickerUpload.onchange = (e) => {
+            const file = e.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    objects.push({ type: 'image', img: img, x: canvas.width/2, y: canvas.height/2, size: 250 });
+                    selectedId = objects.length - 1; window.setMode('edit', true); saveHistory(); render();
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
         };
+
+        window.deleteObject = () => { if (selectedId !== null) { objects.splice(selectedId, 1); selectedId = null; saveHistory(); updateUI(); render(); } };
+        sizeSlider.oninput = (e) => { if (selectedId !== null) { objects[selectedId].size = parseInt(e.target.value); render(); } };
         sizeSlider.onchange = saveHistory;
 
+        // ฟังก์ชันปรับขนาดเส้น
         brushSizeSlider.oninput = (e) => {
             currentBrushSize = parseInt(e.target.value);
             brushSizeVal.innerText = currentBrushSize;
@@ -423,62 +415,26 @@
             if (selectedId !== null && currentMode === 'edit') {
                 objectControls.style.display = 'flex';
                 sizeSlider.value = objects[selectedId].size;
-            } else {
-                objectControls.style.display = 'none';
-            }
+            } else { objectControls.style.display = 'none'; }
         }
 
         document.getElementById('noteColor').oninput = (e) => {
             canvasBox.style.backgroundColor = e.target.value;
-            bgImage = null;
-            canvasBox.style.backgroundImage = 'none';
-        };
-
-        bgUpload.onchange = (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const img = new Image();
-                img.onload = () => {
-                    bgImage = img;
-                    canvasBox.style.backgroundImage = `url(${event.target.result})`;
-                    saveHistory();
-                };
-                img.src = event.target.result;
-            };
-            reader.readAsDataURL(file);
+            bgImage = null; canvasBox.style.backgroundImage = 'none';
+            setCanvasSize(1);
         };
 
         document.getElementById('sendBtn').onclick = async function() {
-            this.disabled = true;
-            this.innerText = "กำลังส่ง...";
-            selectedId = null; 
-            render();
+            this.disabled = true; this.innerText = "กำลังส่ง...";
+            selectedId = null; render();
             const finalCanvas = document.createElement('canvas');
-            finalCanvas.width = 800; finalCanvas.height = 800;
+            finalCanvas.width = canvas.width; finalCanvas.height = canvas.height;
             const fCtx = finalCanvas.getContext('2d');
             if (bgImage) {
-                const canvasRatio = finalCanvas.width / finalCanvas.height;
-                const imgRatio = bgImage.width / bgImage.height;
-                let drawW, drawH, drawX, drawY;
-                if (imgRatio > canvasRatio) {
-                    drawH = finalCanvas.height;
-                    drawW = bgImage.width * (finalCanvas.height / bgImage.height);
-                    drawX = (finalCanvas.width - drawW) / 2;
-                    drawY = 0;
-                } else {
-                    drawW = finalCanvas.width;
-                    drawH = bgImage.height * (finalCanvas.width / bgImage.width);
-                    drawX = 0;
-                    drawY = (finalCanvas.height - drawH) / 2;
-                }
-                fCtx.fillStyle = "#000"; 
-                fCtx.fillRect(0,0,800,800);
-                fCtx.drawImage(bgImage, drawX, drawY, drawW, drawH);
+                fCtx.drawImage(bgImage, 0, 0, finalCanvas.width, finalCanvas.height);
             } else {
                 fCtx.fillStyle = document.getElementById('noteColor').value;
-                fCtx.fillRect(0,0,800,800);
+                fCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
             }
             fCtx.drawImage(canvas, 0, 0);
             fCtx.drawImage(uiCanvas, 0, 0);
@@ -489,14 +445,7 @@
                 type: 'handwriting',
                 color: bgImage ? "#ffffff" : document.getElementById('noteColor').value,
                 timestamp: Date.now()
-            }).then(() => {
-                alert("ส่งคำอวยพรเรียบร้อย! 🎉");
-                location.reload(); 
-            }).catch((err) => {
-                alert("เกิดข้อผิดพลาด: " + err.message);
-                this.disabled = false;
-                this.innerText = "ส่งคำอวยพรขึ้นจอใหญ่ 🚀";
-            });
+            }).then(() => { alert("ส่งคำอวยพรเรียบร้อย! 🎉"); location.reload(); });
         };
 
         window.onload = init;
